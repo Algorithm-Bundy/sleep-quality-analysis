@@ -1,0 +1,190 @@
+sleep-quality-analysis/
+├── data/
+│   └── sleep_data.csv         # Your raw dataset
+├── R/
+│   ├── data_preprocessing.R   # Script for loading and cleaning data
+│   ├── model.R                # Script for training and evaluating the Random Forest model
+│   └── visualization.R        # Script for generating plots (e.g., coefficient/variable importance plot)
+├── README.md                  # Project overview and instructions
+├── .gitignore                 # Files and folders to be ignored by Git
+└── requirements.txt           # List of required R packages (optional)
+
+# R/data_preprocessing.R
+
+# Load required libraries
+library(dplyr)
+library(readr)
+
+# Function to load data from a CSV file
+load_data <- function(filepath) {
+  data <- read_csv(filepath)
+  return(data)
+}
+
+# Function to clean data: remove missing values and filter for valid observations
+clean_data <- function(data) {
+  # Remove missing values
+  data <- data %>% 
+    na.omit()
+  
+  # Additional cleaning steps (if needed) can be added here.
+  return(data)
+}
+
+# Example usage:
+if (interactive()) {
+  filepath <- "data/sleep_data.csv"
+  data <- load_data(filepath)
+  cleaned_data <- clean_data(data)
+  print(head(cleaned_data))
+}
+# R/model.R
+
+# Load required libraries
+library(randomForest)
+library(readr)
+library(dplyr)
+library(caret)
+
+# Function to load and prepare data for modeling
+load_and_prepare_data <- function(filepath) {
+  data <- read_csv(filepath)
+  
+  # Basic data cleaning: remove NAs
+  data <- na.omit(data)
+  
+  # Assume that the dataset contains these columns:
+  # 'screen_time', 'physical_activity', 'light_exposure', and 'sleep_quality'
+  features <- c("screen_time", "physical_activity", "light_exposure")
+  
+  X <- data %>% select(all_of(features))
+  y <- data$sleep_quality
+  
+  return(list(X = X, y = y))
+}
+
+# Function to train a Random Forest model and evaluate performance
+train_model <- function(X, y) {
+  set.seed(42)
+  # Create training and testing sets (80/20 split)
+  trainIndex <- createDataPartition(y, p = 0.8, list = FALSE)
+  X_train <- X[trainIndex, ]
+  X_test  <- X[-trainIndex, ]
+  y_train <- y[trainIndex]
+  y_test  <- y[-trainIndex]
+  
+  # Train a Random Forest model
+  rf_model <- randomForest(x = X_train, y = y_train, ntree = 100, importance = TRUE)
+  
+  # Make predictions and calculate Mean Squared Error (MSE)
+  predictions <- predict(rf_model, X_test)
+  mse <- mean((predictions - y_test)^2)
+  cat("Test MSE:", mse, "\n")
+  
+  return(rf_model)
+}
+
+# Example usage:
+if (interactive()) {
+  data_list <- load_and_prepare_data("data/sleep_data.csv")
+  rf_model <- train_model(data_list$X, data_list$y)
+  
+  # Save the trained model to file
+  saveRDS(rf_model, "rf_model.rds")
+}
+# R/visualization.R
+
+# Load required libraries
+library(ggplot2)
+library(randomForest)
+library(dplyr)
+
+# Function to generate a variable importance plot based on the Random Forest model
+plot_variable_importance <- function(model) {
+  # Extract the importance measure (here we use IncNodePurity)
+  importance_values <- importance(model)
+  importance_df <- data.frame(
+    Feature = rownames(importance_values),
+    Importance = importance_values[, "IncNodePurity"]
+  )
+  
+  # Sort the data for better visualization
+  importance_df <- importance_df %>%
+    arrange(desc(Importance))
+  
+  # Create the coefficient (variable importance) plot
+  p <- ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(
+      title = "Variable Importance: Screen Time & Sleep Quality",
+      x = "Features",
+      y = "Importance (IncNodePurity)"
+    ) +
+    theme_minimal()
+  
+  print(p)
+}
+
+# Example usage:
+if (interactive()) {
+  # Load the model saved from model.R
+  rf_model <- readRDS("rf_model.rds")
+  plot_variable_importance(rf_model)
+}
+
+# Sleep Quality Analysis in R
+
+This repository contains the code for analyzing sleep quality in relation to modern digital lifestyles in R. The focus is on exploring how screen time, physical activity, and light exposure impact sleep outcomes. The analysis makes use of a Random Forest model to rank the predictors and generate actionable insights.
+
+## Repository Structure
+
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Algorithm-Bundy/sleep-quality-analysis.git
+
+cd sleep-quality-analysis
+
+Open R or RStudio and run the scripts in order:
+
+First, run R/data_preprocessing.R to load and clean the data.
+
+Then, run R/model.R to train and evaluate the Random Forest model.
+
+Finally, use R/visualization.R to generate the variable importance plot.
+
+install.packages(c("dplyr", "readr", "randomForest", "caret", "ggplot2"))
+
+source("R/data_preprocessing.R")
+
+source("R/model.R")
+
+source("R/visualization.R")
+
+
+---
+
+### **File: requirements.txt**
+
+
+---
+
+### **File: .gitignore**
+
+```plaintext
+# R related
+.Rhistory
+.RData
+.Rproj.user/
+.Renviron
+
+# R Markdown intermediate files
+*.utf8.md
+*.knit.md
+.ipynb_checkpoints/
+
+# Library and package directories (if using renv)
+renv/library/
